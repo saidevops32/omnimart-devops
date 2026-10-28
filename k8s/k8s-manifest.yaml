@@ -142,7 +142,7 @@ spec:
     spec:
       containers:
       - name: auth-node
-        image: omnimartacr.azurecr.io/omnimart-auth:latest
+        image: acromnimart4863.azurecr.io/omnimart-auth:latest
         ports:
         - containerPort: 3001
           name: http
@@ -200,7 +200,7 @@ spec:
     spec:
       containers:
       - name: catalog-node
-        image: omnimartacr.azurecr.io/omnimart-catalog:latest
+        image: acromnimart4863.azurecr.io/omnimart-catalog:latest
         env:
         - name: DB_HOST
           value: "postgres-service"
@@ -265,7 +265,7 @@ spec:
     spec:
       containers:
       - name: checkout-java
-        image: omnimartacr.azurecr.io/omnimart-checkout:latest
+        image: acromnimart4863.azurecr.io/omnimart-checkout:latest
         env:
         - name: SPRING_DATASOURCE_URL
           value: "jdbc:mysql://mysql-service:3306/omnimart_checkout?useSSL=false&allowPublicKeyRetrieval=true"
@@ -325,7 +325,7 @@ spec:
     spec:
       containers:
       - name: tracking-erlang
-        image: omnimartacr.azurecr.io/omnimart-tracking:latest
+        image: acromnimart4863.azurecr.io/omnimart-tracking:latest
         ports:
         - containerPort: 8090
           name: http
@@ -382,7 +382,7 @@ spec:
     spec:
       containers:
       - name: web-react
-        image: omnimartacr.azurecr.io/omnimart-web:latest
+        image: acromnimart4863.azurecr.io/omnimart-web:latest
         ports:
         - containerPort: 8080
           name: http
