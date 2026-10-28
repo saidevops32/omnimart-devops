@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+target/
+_build/
+*.class
+*.jar
+.env
+.DS_Store
+*.log
+.terraform/
+*.tfstate*

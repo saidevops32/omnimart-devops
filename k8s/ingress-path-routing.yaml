@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: omnimart-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+  - http:
+      paths:
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-node-svc
+            port:
+              number: 3001
+      - path: /api/catalog
+        pathType: Prefix
+        backend:
+          service:
+            name: catalog-node-svc
+            port:
+              number: 3002
+      - path: /api/checkout
+        pathType: Prefix
+        backend:
+          service:
+            name: checkout-java-svc
+            port:
+              number: 8080
+      - path: /api/cart
+        pathType: Prefix
+        backend:
+          service:
+            name: checkout-java-svc
+            port:
+              number: 8080
+      - path: /ws/tracking
+        pathType: Prefix
+        backend:
+          service:
+            name: tracking-erlang-svc
+            port:
+              number: 8090
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-react-svc
+            port:
+              number: 80

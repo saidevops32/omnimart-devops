@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-react-deployment
+  labels:
+    app: web-react
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-react
+  template:
+    metadata:
+      labels:
+        app: web-react
+    spec:
+      containers:
+      - name: web-react
+        image: acromnimart4863.azurecr.io/omnimart-web:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "150m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-react-svc
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: web-react

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-node-deployment
+  labels:
+    app: catalog-node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-node
+  template:
+    metadata:
+      labels:
+        app: catalog-node
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: omnimart-workload-identity-sa
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: catalog-node
+        image: acromnimart4863.azurecr.io/omnimart-catalog:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3002
+        env:
+        - name: DB_HOST
+          value: "postgres-catalog-db.postgres.database.azure.com"
+        - name: DB_USER
+          value: "id-omnimart-auth-db"
+        - name: DB_NAME
+          value: "omnimart_catalog"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /api/catalog/healthz
+            port: 3002
+          initialDelaySeconds: 20
+          periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-node-svc
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3002
+    targetPort: 3002
+  selector:
+    app: catalog-node

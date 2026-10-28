@@ -1,0 +1,19 @@
+{
+  "name": "omnimart-auth-service",
+  "version": "1.0.0",
+  "description": "Zero-trust auth microservice using Node.js and Azure MySQL Flexible Server with Workload Identity",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.2.1",
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.9.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
