@@ -6,7 +6,7 @@ start(_StartType, _StartArgs) ->
     Dispatch = cowboy_router:compile([
         {'_', [
             {"/ws/tracking/[...]", tracking_ws_handler, []},
-            {"/api/tracking/healthz", cowboy_static, {inline, <<"{\"status\":\"healthy\",\"service\":\"erlang-cowboy\"}">>}}
+            {"/api/tracking/healthz", tracking_health_handler, []}
         ]}
     ]),
     {ok, _} = cowboy:start_clear(http_listener,
