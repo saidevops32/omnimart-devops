@@ -1,58 +1,54 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: catalog-node-deployment
+  name: omnimart-catalog
   labels:
-    app: catalog-node
+    app: omnimart-catalog
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: catalog-node
+      app: omnimart-catalog
   template:
     metadata:
       labels:
-        app: catalog-node
+        app: omnimart-catalog
         azure.workload.identity/use: "true"
     spec:
       serviceAccountName: omnimart-workload-identity-sa
       securityContext:
         runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
-      - name: catalog-node
-        image: acromnimart4863.azurecr.io/omnimart-catalog:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 3002
-        env:
-        - name: DB_HOST
-          value: "postgres-catalog-db.postgres.database.azure.com"
-        - name: DB_USER
-          value: "id-omnimart-auth-db"
-        - name: DB_NAME
-          value: "omnimart_catalog"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "300m"
-        livenessProbe:
-          httpGet:
-            path: /api/catalog/healthz
-            port: 3002
-          initialDelaySeconds: 20
-          periodSeconds: 15
+        - name: catalog-node
+          image: REPLACE_WITH_ACR_NAME.azurecr.io/omnimart-catalog:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: catalog-node-svc
+  name: catalog-service
 spec:
   type: ClusterIP
-  ports:
-  - port: 3002
-    targetPort: 3002
   selector:
-    app: catalog-node
+    app: omnimart-catalog
+  ports:
+    - port: 3002
+      targetPort: 3002

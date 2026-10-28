@@ -1,49 +1,51 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: checkout-java-deployment
+  name: omnimart-checkout
   labels:
-    app: checkout-java
+    app: omnimart-checkout
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: checkout-java
+      app: omnimart-checkout
   template:
     metadata:
       labels:
-        app: checkout-java
+        app: omnimart-checkout
+        azure.workload.identity/use: "true"
     spec:
+      serviceAccountName: omnimart-workload-identity-sa
       securityContext:
         runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
-      - name: checkout-java
-        image: acromnimart4863.azurecr.io/omnimart-checkout:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            memory: "384Mi"
-            cpu: "150m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /api/checkout/healthz
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 15
+        - name: checkout-java
+          image: REPLACE_WITH_ACR_NAME.azurecr.io/omnimart-checkout:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "256Mi"
+            limits:
+              cpu: "400m"
+              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: checkout-java-svc
+  name: checkout-service
 spec:
   type: ClusterIP
-  ports:
-  - port: 8080
-    targetPort: 8080
   selector:
-    app: checkout-java
+    app: omnimart-checkout
+  ports:
+    - port: 8080
+      targetPort: 8080

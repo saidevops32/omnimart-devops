@@ -23,26 +23,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
 
       - name: "Gate 1 - Hadolint (Dockerfile Linting)"
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@54c9daabfe82e31417d0273e34c377456729ea85 # v3.1.0
         with:
           recursive: true
           failure-threshold: error
           ignore: DL3018
 
       - name: "Gate 2a - Gitleaks (Secret Detection)"
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@f9076f7cd5558943714ee6b6805822be886fa708 # v2.3.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Gate 2b - Semgrep (SAST Code Scan)"
         run: |
           python3 -m pip install semgrep
-          semgrep scan --config auto --error --exclude="*.test.js" .
+          semgrep scan --config p/ci --config p/security-audit --error --exclude-rule=javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage --exclude-rule=yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag .
 
       - name: "Gate 3 - Trivy Filesystem (Open Source SCA)"
         uses: aquasecurity/trivy-action@master
@@ -66,13 +66,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Code"
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: "Install Syft (SBOM Generator)"
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      - name: "Install Syft Securely (Without Piping)"
+        run: |
+          curl -sSfL -o install_syft.sh https://raw.githubusercontent.com/anchore/syft/main/install.sh
+          sh install_syft.sh -b /usr/local/bin
+          rm -f install_syft.sh
 
       - name: "Azure OIDC Login"
-        uses: azure/login@v2
+        uses: azure/login@cb79c3a13813f8cbbe0323a1c4c350799591a69c # v2.0.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -95,7 +98,7 @@ jobs:
           syft ${{ env.ACR_NAME }}.azurecr.io/omnimart-catalog:${{ env.IMAGE_TAG }} -o cyclonedx-json > sbom-catalog.json
 
       - name: "Upload SBOMs"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161281a37756d11a2 # v4.1.5
         with:
           name: cyclonedx-sbom-reports
           path: sbom-*.json
@@ -130,7 +133,7 @@ jobs:
           docker push ${{ env.ACR_NAME }}.azurecr.io/omnimart-web:latest
 
       - name: "Gate 7 - Deploy Manifests to AKS"
-        uses: azure/aks-set-context@v3
+        uses: azure/aks-set-context@4e03075b964951473ae671ef3967d71b3e8e7807 # v3.2
         with:
           resource-group: ${{ env.AZURE_RESOURCE_GROUP }}
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}

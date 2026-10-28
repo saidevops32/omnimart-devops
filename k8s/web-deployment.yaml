@@ -1,41 +1,49 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web-react-deployment
+  name: omnimart-web
   labels:
-    app: web-react
+    app: omnimart-web
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: web-react
+      app: omnimart-web
   template:
     metadata:
       labels:
-        app: web-react
+        app: omnimart-web
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        fsGroup: 101
       containers:
-      - name: web-react
-        image: acromnimart4863.azurecr.io/omnimart-web:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "150m"
+        - name: web-react
+          image: REPLACE_WITH_ACR_NAME.azurecr.io/omnimart-web:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "150m"
+              memory: "128Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: web-react-svc
+  name: web-service
 spec:
   type: ClusterIP
-  ports:
-  - port: 80
-    targetPort: 80
   selector:
-    app: web-react
+    app: omnimart-web
+  ports:
+    - port: 8080
+      targetPort: 8080

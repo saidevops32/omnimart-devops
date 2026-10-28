@@ -1,49 +1,49 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tracking-erlang-deployment
+  name: omnimart-tracking
   labels:
-    app: tracking-erlang
+    app: omnimart-tracking
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tracking-erlang
+      app: omnimart-tracking
   template:
     metadata:
       labels:
-        app: tracking-erlang
+        app: omnimart-tracking
     spec:
       securityContext:
         runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
-      - name: tracking-erlang
-        image: acromnimart4863.azurecr.io/omnimart-tracking:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8090
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "150m"
-        livenessProbe:
-          httpGet:
-            path: /api/tracking/healthz
-            port: 8090
-          initialDelaySeconds: 15
-          periodSeconds: 10
+        - name: tracking-erlang
+          image: REPLACE_WITH_ACR_NAME.azurecr.io/omnimart-tracking:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: 8081
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: tracking-erlang-svc
+  name: tracking-service
 spec:
   type: ClusterIP
-  ports:
-  - port: 8090
-    targetPort: 8090
   selector:
-    app: tracking-erlang
+    app: omnimart-tracking
+  ports:
+    - port: 8081
+      targetPort: 8081

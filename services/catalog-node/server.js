@@ -27,7 +27,7 @@ async function getPgPool() {
     password: password || '',
     database: process.env.DB_NAME || 'omnimart_catalog',
     port: parseInt(process.env.DB_PORT || '5432', 10),
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
   });
 }
 
