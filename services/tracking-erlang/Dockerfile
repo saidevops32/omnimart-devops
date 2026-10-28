@@ -11,4 +11,4 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 COPY --from=builder /app/_build/default/lib/ ./lib/
 EXPOSE 8090
-CMD ["erl", "-pa", "./lib/*/ebin", "-eval", "application:ensure_all_started(tracking)"]
+CMD ["erl", "-pa", "./lib/*/ebin", "-noshell", "-noinput", "-eval", "application:ensure_all_started(tracking), receive stop -> ok end."]
