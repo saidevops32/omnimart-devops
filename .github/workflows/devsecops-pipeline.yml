@@ -50,14 +50,18 @@ jobs:
             .
 
       - name: "Gate 3 - Trivy Filesystem (Open Source SCA)"
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          trivy-opts: '--scanners vuln --skip-files services/checkout-java/pom.xml'
-          severity: 'CRITICAL,HIGH'
-          format: 'table'
-          exit-code: '0'
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update && sudo apt-get install -y trivy
+
+          trivy fs \
+            --scanners vuln \
+            --severity CRITICAL,HIGH \
+            --skip-files "services/checkout-java/pom.xml" \
+            --exit-code 0 \
+            .
 
       - name: "Gate 4 - Checkov (IaC Kubernetes Security)"
         uses: bridgecrewio/checkov-action@master
@@ -109,12 +113,12 @@ jobs:
           name: cyclonedx-sbom-reports
           path: sbom-*.json
 
-      - name: "Gate 5b - Container Vulnerability Scan (Trivy)"
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.ACR_NAME }}.azurecr.io/omnimart-auth:${{ env.IMAGE_TAG }}
-          severity: 'CRITICAL'
-          exit-code: '0'
+      - name: "Gate 5b - Container Vulnerability Scan"
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image \
+            --severity CRITICAL \
+            --exit-code 0 \
+            ${{ env.ACR_NAME }}.azurecr.io/omnimart-auth:${{ env.IMAGE_TAG }}
 
       - name: "Gate 6 - Push Verified Images to ACR"
         run: |
