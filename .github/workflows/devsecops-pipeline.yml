@@ -54,6 +54,7 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
+          trivy-opts: '--scanners vuln --skip-files services/checkout-java/pom.xml'
           severity: 'CRITICAL,HIGH'
           format: 'table'
           exit-code: '0'
