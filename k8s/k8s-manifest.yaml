@@ -1,0 +1,483 @@
+---
+# ==============================================================================
+# 1. DATABASES: MySQL & PostgreSQL
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: default
+  labels:
+    app: mysql
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "OmnimartRootPass123!"
+        - name: MYSQL_DATABASE
+          value: "omnimart_checkout"
+        ports:
+        - containerPort: 3306
+          name: mysql
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "128Mi"
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+    name: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: default
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_HOST_AUTH_METHOD
+          value: "trust"
+        - name: POSTGRES_DB
+          value: "omnimart_catalog"
+        ports:
+        - containerPort: 5432
+          name: postgres
+        resources:
+          requests:
+            cpu: "5m"
+            memory: "64Mi"
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+
+---
+# ==============================================================================
+# 2. MICROSERVICES
+# ==============================================================================
+# --- Auth Service (Node.js) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omnimart-auth
+  namespace: default
+  labels:
+    app: omnimart-auth
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: omnimart-auth
+  template:
+    metadata:
+      labels:
+        app: omnimart-auth
+        azure.workload.identity/use: "true"
+    spec:
+      containers:
+      - name: auth-node
+        image: omnimartacr.azurecr.io/omnimart-auth:latest
+        ports:
+        - containerPort: 3001
+          name: http
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/auth/healthz
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: omnimart-auth
+  ports:
+  - port: 3001
+    targetPort: 3001
+    name: http
+---
+# --- Catalog Service (Node.js + PostgreSQL) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omnimart-catalog
+  namespace: default
+  labels:
+    app: omnimart-catalog
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: omnimart-catalog
+  template:
+    metadata:
+      labels:
+        app: omnimart-catalog
+        azure.workload.identity/use: "true"
+    spec:
+      containers:
+      - name: catalog-node
+        image: omnimartacr.azurecr.io/omnimart-catalog:latest
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "omnimart_catalog"
+        ports:
+        - containerPort: 3002
+          name: http
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/catalog/healthz
+            port: 3002
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: omnimart-catalog
+  ports:
+  - port: 3002
+    targetPort: 3002
+    name: http
+---
+# --- Checkout Service (Java / Spring Boot + MySQL) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omnimart-checkout
+  namespace: default
+  labels:
+    app: omnimart-checkout
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: omnimart-checkout
+  template:
+    metadata:
+      labels:
+        app: omnimart-checkout
+        azure.workload.identity/use: "true"
+    spec:
+      containers:
+      - name: checkout-java
+        image: omnimartacr.azurecr.io/omnimart-checkout:latest
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-service:3306/omnimart_checkout?useSSL=false&allowPublicKeyRetrieval=true"
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/checkout/healthz
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: omnimart-checkout
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+---
+# --- Tracking Service (Erlang Cowboy WebSocket / HTTP) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omnimart-tracking
+  namespace: default
+  labels:
+    app: omnimart-tracking
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: omnimart-tracking
+  template:
+    metadata:
+      labels:
+        app: omnimart-tracking
+    spec:
+      containers:
+      - name: tracking-erlang
+        image: omnimartacr.azurecr.io/omnimart-tracking:latest
+        ports:
+        - containerPort: 8090
+          name: http
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/tracking/healthz
+            port: 8090
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracking-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: omnimart-tracking
+  ports:
+  - port: 8081
+    targetPort: 8090
+    name: http
+---
+# --- Web Frontend (React / Nginx) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omnimart-web
+  namespace: default
+  labels:
+    app: omnimart-web
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: omnimart-web
+  template:
+    metadata:
+      labels:
+        app: omnimart-web
+    spec:
+      containers:
+      - name: web-react
+        image: omnimartacr.azurecr.io/omnimart-web:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "32Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: omnimart-web
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+
+---
+# ==============================================================================
+# 3. NGINX INGRESS CONTROLLER CONFIGURATION
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: omnimart-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+  - http:
+      paths:
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 3001
+      - path: /api/catalog
+        pathType: Prefix
+        backend:
+          service:
+            name: catalog-service
+            port:
+              number: 3002
+      - path: /api/checkout
+        pathType: Prefix
+        backend:
+          service:
+            name: checkout-service
+            port:
+              number: 8080
+      - path: /api/cart
+        pathType: Prefix
+        backend:
+          service:
+            name: checkout-service
+            port:
+              number: 8080
+      - path: /api/tracking
+        pathType: Prefix
+        backend:
+          service:
+            name: tracking-service
+            port:
+              number: 8081
+      - path: /ws/tracking
+        pathType: Prefix
+        backend:
+          service:
+            name: tracking-service
+            port:
+              number: 8081
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-service
+            port:
+              number: 8080
