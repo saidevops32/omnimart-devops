@@ -110,7 +110,7 @@ spec:
     targetPort: 5432
     name: postgres
 ---
-# --- Auth Service (Go) ---
+# --- Auth Service (Port 3001) ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -134,7 +134,7 @@ spec:
       - name: auth-go
         image: acromnimart4863.azurecr.io/omnimart-auth:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 3001
           name: http
         env:
         - name: DB_HOST
@@ -155,9 +155,8 @@ spec:
             cpu: 150m
             memory: 128Mi
         readinessProbe:
-          httpGet:
-            path: /healthz
-            port: 8080
+          tcpSocket:
+            port: 3001
           initialDelaySeconds: 5
           periodSeconds: 10
 ---
@@ -172,10 +171,10 @@ spec:
     app: omnimart-auth
   ports:
   - port: 8080
-    targetPort: 8080
+    targetPort: 3001
     name: http
 ---
-# --- Catalog Service (Python / Flask) ---
+# --- Catalog Service (Port 3002) ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -199,7 +198,7 @@ spec:
       - name: catalog-python
         image: acromnimart4863.azurecr.io/omnimart-catalog:latest
         ports:
-        - containerPort: 5000
+        - containerPort: 3002
           name: http
         resources:
           requests:
@@ -209,9 +208,8 @@ spec:
             cpu: 150m
             memory: 128Mi
         readinessProbe:
-          httpGet:
-            path: /healthz
-            port: 5000
+          tcpSocket:
+            port: 3002
           initialDelaySeconds: 5
           periodSeconds: 10
 ---
@@ -226,10 +224,10 @@ spec:
     app: omnimart-catalog
   ports:
   - port: 5000
-    targetPort: 5000
+    targetPort: 3002
     name: http
 ---
-# --- Checkout Service (Node.js) ---
+# --- Checkout Service (Spring Boot - Port 8080) ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -253,7 +251,7 @@ spec:
       - name: checkout-node
         image: acromnimart4863.azurecr.io/omnimart-checkout:latest
         ports:
-        - containerPort: 3000
+        - containerPort: 8080
           name: http
         env:
         - name: DB_HOST
@@ -269,15 +267,14 @@ spec:
         resources:
           requests:
             cpu: 10m
-            memory: 64Mi
-          limits:
-            cpu: 150m
             memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
         readinessProbe:
-          httpGet:
-            path: /healthz
-            port: 3000
-          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
           periodSeconds: 10
 ---
 apiVersion: v1
@@ -291,10 +288,10 @@ spec:
     app: omnimart-checkout
   ports:
   - port: 3000
-    targetPort: 3000
+    targetPort: 8080
     name: http
 ---
-# --- Tracking Service (Erlang Cowboy WebSocket / HTTP) ---
+# --- Tracking Service (Erlang Cowboy - Port 8090) ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -348,7 +345,7 @@ spec:
     targetPort: 8090
     name: http-ws
 ---
-# --- Web Frontend (React / Nginx) ---
+# --- Web Frontend (React / Nginx - Port 8080) ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
